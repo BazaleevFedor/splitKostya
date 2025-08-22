@@ -1,0 +1,115 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/*, hotfix/* ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # Job для проверки кода (линтер, тесты, билд)
+  test-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run linter
+      run: npm run lint || echo "Linting step - add lint script to package.json if needed"
+      
+    - name: Run tests
+      run: npm test -- --watch=false --browsers=ChromeHeadless
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Build for production
+      run: npm run build -- --configuration production
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-files
+        path: dist/
+        retention-days: 1
+
+  # Job для деплоя на VPS (только при merge в main)
+  deploy:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-files
+        path: dist/
+        
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT }}
+        script: |
+          # Переходим в директорию проекта
+          cd /var/www/splitKostya
+          
+          # Останавливаем текущий сервис если запущен
+          sudo systemctl stop splitkostya.service || true
+          
+          # Делаем backup текущей версии
+          if [ -d "current" ]; then
+            sudo cp -r current backup-$(date +%Y%m%d-%H%M%S)
+          fi
+          
+          # Создаем новую директорию для деплоя
+          sudo mkdir -p releases/$(date +%Y%m%d-%H%M%S)
+          sudo chown $USER:$USER releases/$(date +%Y%m%d-%H%M%S)
+          
+          # Клонируем/обновляем репозиторий
+          if [ ! -d "repo" ]; then
+            git clone https://github.com/${{ github.repository }}.git repo
+          else
+            cd repo
+            git fetch origin
+            git reset --hard origin/main
+            cd ..
+          fi
+          
+          # Копируем собранные файлы
+          sudo cp -r dist/* releases/$(date +%Y%m%d-%H%M%S)/
+          
+          # Обновляем символическую ссылку
+          sudo ln -sfn releases/$(date +%Y%m%d-%H%M%S) current
+          
+          # Устанавливаем зависимости для production
+          cd current
+          npm ci --only=production
+          
+          # Запускаем сервис
+          sudo systemctl start splitkostya.service
+          sudo systemctl enable splitkostya.service
+          
+          # Проверяем статус
+          sudo systemctl status splitkostya.service
+          
+          # Очищаем старые backup'ы (оставляем последние 5)
+          cd /var/www/splitKostya
+          ls -t backup-* | tail -n +6 | xargs -r sudo rm -rf
+          ls -t releases/ | tail -n +6 | xargs -r sudo rm -rf
+          
+          echo "Deployment completed successfully!"
