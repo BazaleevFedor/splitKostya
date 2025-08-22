@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop, feature/*, hotfix/* ]
+    branches: [ main, test-*, splitkost-* ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -11,32 +11,32 @@ jobs:
   # Job для проверки кода (линтер, тесты, билд)
   test-and-build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm ci
-      
+
     - name: Run linter
       run: npm run lint || echo "Linting step - add lint script to package.json if needed"
-      
+
     - name: Run tests
       run: npm test -- --watch=false --browsers=ChromeHeadless
-      
+
     - name: Build project
       run: npm run build
-      
+
     - name: Build for production
       run: npm run build -- --configuration production
-      
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -49,14 +49,14 @@ jobs:
     needs: test-and-build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
+
     steps:
     - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
         name: build-files
         path: dist/
-        
+
     - name: Deploy to VPS
       uses: appleboy/ssh-action@v1.0.3
       with:
