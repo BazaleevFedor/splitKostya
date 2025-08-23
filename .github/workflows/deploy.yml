@@ -1,55 +1,57 @@
-name: CD
+name: deploy
 
 on:
-  pull_request:
-    branches:
-      - main
-    types:
-      - closed   # событие закрытия PR
+    pull_request:
+        branches:
+            - main
+        types:
+            - closed
 
 jobs:
-  test-and-build:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+    ci-checks:
+        if: github.event.pull_request.merged == true
+        uses: ./.github/workflows/ci.yml
+        secrets: inherit
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
+    deploy-production:
+        runs-on: ubuntu-latest
+        needs: ci-checks
+        if: github.event.pull_request.merged == true
+        environment:
+            name: production
+            url: https://splitcostya.ru
+        steps:
+            - name: Deploy to production VPS
+              uses: appleboy/ssh-action@v0.1.10
+              with:
+                  host: ${{ secrets.VPS_HOST }}
+                  username: ${{ secrets.VPS_USER }}
+                  key: ${{ secrets.VPS_SSH_KEY }}
+                  script: |
+                      BASE_DIR=/root/banzay/splitKostya
+                      APP_NAME="splitKostya"
 
-      - name: Install dependencies
-        run: npm install
+                      echo "🚀 Deploying to PRODUCTION..."
 
-      - name: Run linter
-        run: npm run lint
+                      cd $BASE_DIR || exit 1
+                      git fetch origin main
+                      git reset --hard origin/main
+                      git clean -fdx
+                      npm install --production
+                      npm run build
+                      PORT=3000 pm2 restart $APP_NAME || PORT=3000 pm2 start npm --name "$APP_NAME" -- start
 
-      - name: Run tests
-        run: npm test -- --watchAll=false
+    stop-production:
+        runs-on: ubuntu-latest
+        steps:
+            -   name: Stop production app
+                uses: appleboy/ssh-action@v0.1.10
+                with:
+                    host: ${{ secrets.VPS_HOST }}
+                    username: ${{ secrets.VPS_USER }}
+                    key: ${{ secrets.VPS_SSH_KEY }}
+                    script: |
+                        APP_NAME="splitKostya"
 
-      - name: Build project
-        run: npm run build
-
-  deploy:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    needs: test-and-build
-    steps:
-      - name: Manual approval before deploy
-        uses: hmarr/auto-approve-action@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /var/www/splitkostya || exit 1
-            git pull origin main
-            npm install --production
-            pm2 restart splitkostya || pm2 start npm --name "splitkostya" -- start
+                        echo "🛑 Stopping $APP_NAME ..."
+                        pm2 stop $APP_NAME || echo "⚠️ $APP_NAME is not running"

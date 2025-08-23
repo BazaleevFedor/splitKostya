@@ -1,32 +1,166 @@
-name: CI
+name: Lint, Test & Build
 
 on:
-  push:
-    branches:
-      - '**'      # любые ветки
-  pull_request:   # любой PR
+    push:
+        branches:
+            - '**'
+    pull_request:
 
 jobs:
-  test-and-build:
-    runs-on: ubuntu-latest
+    setup:
+        runs-on: ubuntu-latest
+        outputs:
+            artifact-name: node-modules
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v3
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
+            - name: Cache Node modules
+              id: cache
+              uses: actions/cache@v3
+              with:
+                  path: ~/.npm
+                  key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+                  restore-keys: |
+                      ${{ runner.os }}-node-
 
-      - name: Install dependencies
-        run: npm install
+            - name: Install dependencies
+              run: npm install
 
-      - name: Run linter
-        run: npm run lint
+            - name: Upload node_modules as artifact
+              uses: actions/upload-artifact@v3
+              with:
+                  name: node-modules
+                  path: node_modules
 
-      - name: Run tests
-        run: npm test -- --watch=false --browsers=ChromeHeadless
+    lint:
+        runs-on: ubuntu-latest
+        needs: setup
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v3
 
-      - name: Build project
-        run: npm run build
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
+
+            - name: Download node_modules
+              uses: actions/download-artifact@v3
+              with:
+                  name: node-modules
+                  path: ./node_modules
+
+            - name: Run linter
+              run: npm run lint
+
+    test:
+        runs-on: ubuntu-latest
+        needs: setup
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
+
+            - name: Download node_modules
+              uses: actions/download-artifact@v3
+              with:
+                  name: node-modules
+                  path: ./node_modules
+
+            - name: Run tests
+              run: npm test -- --watch=false --browsers=ChromeHeadless
+
+    build:
+        runs-on: ubuntu-latest
+        needs: test
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 20
+
+            - name: Download node_modules
+              uses: actions/download-artifact@v3
+              with:
+                  name: node-modules
+                  path: ./node_modules
+
+            - name: Build project
+              run: npm run build
+
+    deploy-staging:
+        runs-on: ubuntu-latest
+        needs: build
+        environment:
+            name: staging
+            url: https://staging.splitcostya.ru
+        steps:
+            -   name: Deploy to staging VPS
+                uses: appleboy/ssh-action@v0.1.10
+                with:
+                    host: ${{ secrets.VPS_HOST }}
+                    username: ${{ secrets.VPS_USER }}
+                    key: ${{ secrets.VPS_SSH_KEY }}
+                    script: |
+                        BRANCH=${{ github.ref_name }}
+                        BASE_DIR=/root/banzay/splitKostya/staging
+                        APP_DIR=$BASE_DIR/staging-$BRANCH
+                        APP_NAME="staging-$BRANCH"
+
+                        echo "🚀 Deploying branch $BRANCH to STAGING in $APP_DIR ..."
+
+                        # создаём базовую папку для всех стейджей
+                        mkdir -p $BASE_DIR
+                        cd $BASE_DIR || exit 1
+
+                        # клонируем или обновляем репозиторий ветки
+                        if [ -d "$APP_DIR/.git" ]; then
+                          cd $APP_DIR
+                          git fetch origin $BRANCH
+                          git reset --hard origin/$BRANCH
+                          git clean -fdx
+                        else
+                          git clone -b $BRANCH ${{ secrets.REPO_URL }} $APP_DIR
+                          cd $APP_DIR
+                        fi
+
+                        npm install --production
+                        npm run build
+
+                        # запуск через pm2 на порту 4000
+                        PORT=4000 pm2 restart $APP_NAME || PORT=4000 pm2 start npm --name "$APP_NAME" -- start
+
+    stop-staging:
+        runs-on: ubuntu-latest
+        steps:
+            -   name: Stop staging app and remove folder
+                uses: appleboy/ssh-action@v0.1.10
+                with:
+                    host: ${{ secrets.VPS_HOST }}
+                    username: ${{ secrets.VPS_USER }}
+                    key: ${{ secrets.VPS_SSH_KEY }}
+                    script: |
+                        BRANCH=${{ github.ref_name }}
+                        BASE_DIR=/root/banzay/splitKostya/staging
+                        APP_DIR=$BASE_DIR/staging-$BRANCH
+                        APP_NAME="staging-$BRANCH"
+
+                        echo "🛑 Stopping $APP_NAME ..."
+                        pm2 stop $APP_NAME || echo "⚠️ $APP_NAME is not running"
+                        pm2 delete $APP_NAME || echo "⚠️ $APP_NAME was not found"
+
+                        echo "🗑 Removing folder $APP_DIR ..."
+                        rm -rf $APP_DIR
