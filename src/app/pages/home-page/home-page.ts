@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject  } from '@angular/core';
 import { Translate } from '../../services/translate/translate';
 
 @Component({
@@ -9,5 +9,5 @@ import { Translate } from '../../services/translate/translate';
     styleUrl: './home-page.scss'
 })
 export class HomePage {
-    constructor(public translate: Translate) {}
+    translate = inject(Translate);
 }
