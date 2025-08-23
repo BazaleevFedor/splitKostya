@@ -1,6 +1,40 @@
-/* You can add global styles to this file, and also import other style files */
+@use 'variables' as *;
 
 html, body {
     margin: 0;
     padding: 0;
+    height: 100vh;
+
+    font-family: 'adieu', sans-serif;
+}
+
+app-root {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+app-header {
+    height: 64px;
+    flex-shrink: 0;
+}
+
+app-home-page {
+    flex: 1;
+    overflow: auto;
+    background-color: var(--color-background);
+}
+
+@font-face {
+    font-family: 'xbox';
+    src: url('../public/fonts/xbox.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'adieu';
+    src: url('../public/fonts/adieu.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
 }

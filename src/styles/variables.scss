@@ -1,0 +1,15 @@
+// коллекция svg для переключалки темы https://www.svgrepo.com/collection/space-hand-drawn-filled-vectors/
+
+:root {
+    --color-main: #46b48f;
+    --color-background: #f6f7f8;
+    --color-black: #1a2225;
+    --color-white: #faf9e5;
+}
+
+.dark {
+    --color-main: #46b48f;
+    --color-background: #f6f7f8;
+    --color-black: #000000;
+    --color-white: #007bff;
+}

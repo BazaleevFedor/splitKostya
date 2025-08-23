@@ -1,0 +1,15 @@
+@mixin f-icon($url, $color: black, $position: center, $size: auto, $repeat: no-repeat) {
+    -webkit-mask-position: $position;
+    mask-position: $position;
+
+    -webkit-mask-size: $size;
+    mask-size: $size;
+
+    -webkit-mask-repeat: $repeat;
+    mask-repeat: $repeat;
+
+    -webkit-mask-image: url(#{$url});
+    mask-image: url(#{$url});
+
+    background-color: $color;
+}
