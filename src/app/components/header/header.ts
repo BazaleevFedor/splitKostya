@@ -14,6 +14,21 @@ const SiteThemes = ['light', 'dark'];
 export class Header implements OnInit {
     siteThemeIndex = 0;
 
+    toggleTheme(siteThemeIndex?: number) {
+        if (siteThemeIndex !== undefined) {
+            this.siteThemeIndex = siteThemeIndex;
+        } else {
+            this.siteThemeIndex = (this.siteThemeIndex + 1) % SiteThemes.length;
+        }
+
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(themeLocalStorageKey, this.siteThemeIndex.toString())
+        }
+
+        SiteThemes.forEach(item => document.body.classList.remove(item));
+        document.body.classList.add(SiteThemes[this.siteThemeIndex]);
+    }
+
     ngOnInit(): void {
         if (typeof window === 'undefined') return;
 
@@ -22,22 +37,5 @@ export class Header implements OnInit {
         if (!isNaN(savedTheme)) {
             this.toggleTheme(savedTheme);
         }
-    }
-
-    toggleTheme(siteThemeIndex?: number) {
-        if (siteThemeIndex !== undefined) {
-            this.siteThemeIndex = siteThemeIndex;
-        } else {
-            this.siteThemeIndex = (this.siteThemeIndex + 1) % SiteThemes.length;
-        }
-
-        console.log(siteThemeIndex);
-
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(themeLocalStorageKey, this.siteThemeIndex.toString())
-        }
-
-        SiteThemes.forEach(item => document.body.classList.remove(item));
-        document.body.classList.add(SiteThemes[this.siteThemeIndex]);
     }
 }

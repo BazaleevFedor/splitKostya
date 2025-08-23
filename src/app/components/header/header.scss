@@ -13,7 +13,7 @@
 
     font-family: 'xbox', sans-serif;
 
-    .header__logo {
+    &__logo {
         display: flex;
         cursor: pointer;
         align-items: center;
@@ -35,7 +35,7 @@
         }
     }
 
-    .header__panel {
+    &__panel {
         .panel__item {
             display: flex;
             align-items: center;
