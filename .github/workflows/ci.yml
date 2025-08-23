@@ -57,7 +57,7 @@ jobs:
                   path: ./node_modules
 
             - name: Run linter
-              run: npm run lint
+              run: npx ng lint
 
     test:
         runs-on: ubuntu-latest
@@ -99,7 +99,7 @@ jobs:
                   path: ./node_modules
 
             - name: Build project
-              run: npm run build
+              run: npx ng build
 
     deploy-staging:
         runs-on: ubuntu-latest
