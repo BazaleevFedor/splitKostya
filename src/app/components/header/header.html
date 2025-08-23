@@ -1,15 +1,13 @@
 <div class="header">
-    <div class="header__logo">
+    <a class="header__logo" href="/">
         <span class="logo__text">Split</span>
-
         <div class="logo__bones"></div>
-
         <span>ya</span>
-    </div>
+    </a>
 
     <div class="header__panel">
         <div class="panel__item">
-            <div class="panel__theme-change" (click)="toggleTheme()"></div>
+            <button class="panel__theme-change" (click)="toggleTheme()" aria-label="сменить тему"></button>
         </div>
     </div>
 </div>

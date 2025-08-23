@@ -1,4 +1,4 @@
-@mixin f-icon($url, $color: black, $position: center, $size: auto, $repeat: no-repeat) {
+@mixin f-icon-svg($url, $color: black, $position: center, $size: auto, $repeat: no-repeat) {
     -webkit-mask-position: $position;
     mask-position: $position;
 
@@ -12,4 +12,14 @@
     mask-image: url(#{$url});
 
     background-color: $color;
+}
+
+@mixin f-icon-image($url, $position: center, $size: auto, $repeat: no-repeat) {
+    content: '';
+    display: block;
+
+    background-position: $position;
+    background-size: $size;
+    background-repeat: $repeat;
+    background-image: url(#{$url});
 }

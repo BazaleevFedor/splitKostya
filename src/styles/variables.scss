@@ -3,13 +3,17 @@
 :root {
     --color-main: #46b48f;
     --color-background: #f6f7f8;
-    --color-black: #1a2225;
-    --color-white: #faf9e5;
+    --color-heard: #ffffff;
+    --color-text: #000000;
+
+    --image-theme: url('/img/moon.svg');
 }
 
 .dark {
     --color-main: #46b48f;
-    --color-background: #f6f7f8;
-    --color-black: #000000;
-    --color-white: #007bff;
+    --color-background: #1a2225;
+    --color-heard: #1a2225;
+    --color-text: #ffffff;
+
+    --image-theme: url('/img/sun.svg');
 }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 
 const themeLocalStorageKey = 'theme';
 
@@ -11,7 +11,7 @@ const SiteThemes = ['light', 'dark'];
     standalone: true,
     styleUrl: './header.scss'
 })
-export class Header {
+export class Header implements OnInit {
     siteThemeIndex = 0;
 
     ngOnInit(): void {
@@ -19,7 +19,9 @@ export class Header {
 
         const savedTheme = Number(localStorage.getItem(themeLocalStorageKey));
 
-        !isNaN(savedTheme) && this.toggleTheme(savedTheme);
+        if (!isNaN(savedTheme)) {
+            this.toggleTheme(savedTheme);
+        }
     }
 
     toggleTheme(siteThemeIndex?: number) {

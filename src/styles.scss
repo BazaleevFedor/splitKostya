@@ -6,6 +6,7 @@ html, body {
     height: 100vh;
 
     font-family: 'adieu', sans-serif;
+    color: var(--color-text);
 }
 
 app-root {
@@ -17,6 +18,7 @@ app-root {
 app-header {
     height: 64px;
     flex-shrink: 0;
+    background-color: var(--color-heard);
 }
 
 app-home-page {
